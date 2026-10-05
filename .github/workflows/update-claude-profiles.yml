@@ -1,0 +1,36 @@
+name: Update claude-profiles
+
+# Points the cask at the latest claude-profiles release. Needs no secrets:
+# the release is public and the commit uses this repo's own token.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Bump to the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cask=Casks/claude-profiles.rb
+          tag=$(gh release view --repo maycuatroi1/claude-profiles --json tagName -q .tagName)
+          version=${tag#v}
+          current=$(sed -n 's/^  version "\(.*\)"$/\1/p' "$cask")
+          if [ "$version" = "$current" ]; then
+            echo "already at $current"
+            exit 0
+          fi
+          sha=$(gh release download "$tag" --repo maycuatroi1/claude-profiles --pattern '*.zip.sha256' --output - | cut -d' ' -f1)
+          echo "$sha" | grep -Eq '^[0-9a-f]{64}$' || { echo "unexpected checksum: $sha"; exit 1; }
+          sed -i -e "s/^  version \".*\"$/  version \"$version\"/" -e "s/^  sha256 \".*\"$/  sha256 \"$sha\"/" "$cask"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "claude-profiles $version"
+          git push
