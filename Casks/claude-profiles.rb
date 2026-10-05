@@ -12,15 +12,14 @@ cask "claude-profiles" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "Claude Profiles.app"
 
   # The app is ad-hoc signed, not notarized. Without this, Gatekeeper refuses
   # its first launch because brew keeps the download's quarantine flag.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Claude Profiles.app"]
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/Claude Profiles.app"]
   end
 
   uninstall quit: "tech.omelet.ClaudeProfiles"
